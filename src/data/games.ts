@@ -2,7 +2,7 @@ import { Game } from '../types';
 
 export const games: Game[] = [
   {
-    id: "1",
+    id: 1,
     title: "Cyber Odyssey 2077",
     coverImage: "https://placehold.co/600x400?text=Cyber+Odyssey",
     releaseDate: "2023-11-15",
@@ -25,7 +25,7 @@ export const games: Game[] = [
     }
   },
   {
-    id: "2",
+    id: 2,
     title: "Battlefield Legacy",
     coverImage: "https://placehold.co/600x400?text=Battlefield+Legacy",
     releaseDate: "2023-10-20",
@@ -48,7 +48,7 @@ export const games: Game[] = [
     }
   },
   {
-    id: "3",
+    id: 3,
     title: "Elden Circle",
     coverImage: "https://placehold.co/600x400?text=Elden+Circle",
     releaseDate: "2022-02-25",
@@ -71,7 +71,7 @@ export const games: Game[] = [
     }
   },
   {
-    id: "4",
+    id: 4,
     title: "Fantasy Legend VII Remake",
     coverImage: "https://placehold.co/600x400?text=Fantasy+Legend+VII",
     releaseDate: "2023-06-02",
@@ -94,7 +94,7 @@ export const games: Game[] = [
     }
   },
   {
-    id: "5",
+    id: 5,
     title: "Red Dead Retribution",
     coverImage: "https://placehold.co/600x400?text=Red+Dead+Retribution",
     releaseDate: "2022-11-05",
@@ -117,7 +117,7 @@ export const games: Game[] = [
     }
   },
   {
-    id: "6",
+    id: 6,
     title: "Witcher 3: Wild Chase",
     coverImage: "https://placehold.co/600x400?text=Witcher+3",
     releaseDate: "2015-05-19",

@@ -1,0 +1,370 @@
+.game-details {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.back-button {
+  display: inline-block;
+  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  color: #333;
+  text-decoration: none;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
+}
+
+.loading, .error, .not-found {
+  text-align: center;
+  padding: 2rem;
+  margin: 2rem 0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.loading {
+  font-size: 1.2rem;
+  color: #0066cc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 102, 204, 0.2);
+  border-radius: 50%;
+  border-top-color: #0066cc;
+  animation: spin 1s infinite linear;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  color: #cc0000;
+}
+
+.error h2, .not-found h2 {
+  font-size: 1.8rem;
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.retry-button, .back-to-library-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.retry-button {
+  background-color: #0066cc;
+  color: white;
+}
+
+.retry-button:hover {
+  background-color: #0055aa;
+}
+
+.back-to-library-button {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.back-to-library-button:hover {
+  background-color: #e0e0e0;
+}
+
+.not-found {
+  color: #666;
+}
+
+.game-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.game-header {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.game-cover {
+  height: 100%;
+}
+
+.game-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-info {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.game-info h1 {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+}
+
+.game-info p {
+  margin: 0;
+  color: #555;
+}
+
+.game-info p span {
+  font-weight: bold;
+  color: #333;
+  margin-right: 0.5rem;
+}
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.genre-tag {
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.store-links {
+  margin-top: 1rem;
+}
+
+.store-links h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.store-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.store-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.store-button:hover {
+  opacity: 0.9;
+}
+
+.store-button.steam {
+  background-color: #1b2838;
+}
+
+.store-button.epic {
+  background-color: #2f2f2f;
+}
+
+.store-button.gog {
+  background-color: #6641a4;
+}
+
+.store-button.microsoft {
+  background-color: #00a4ef;
+}
+
+.game-description, .game-media, .game-specs, .game-tags {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.game-description h2, .game-media h2, .game-specs h2, .game-tags h2 {
+  font-size: 1.8rem;
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.game-description p {
+  line-height: 1.6;
+  color: #555;
+}
+
+.screenshot-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.active-screenshot {
+  width: 100%;
+  height: 500px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.active-screenshot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.screenshot-thumbnails {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+}
+
+.thumbnail {
+  width: 150px;
+  height: 90px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.thumbnail.active {
+  border-color: #0066cc;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.requirements-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.requirement-box {
+  background-color: #f8f8f8;
+  padding: 1.5rem;
+  border-radius: 6px;
+}
+
+.requirement-box h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.4rem;
+  color: #333;
+}
+
+.requirement-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.requirement-box li {
+  margin-bottom: 0.75rem;
+  color: #555;
+}
+
+.requirement-box li strong {
+  display: inline-block;
+  width: 80px;
+  color: #333;
+}
+
+.requirement-box.minimum {
+  border-left: 4px solid #ffa500;
+}
+
+.requirement-box.recommended {
+  border-left: 4px solid #0066cc;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tag {
+  background-color: #f0f0f0;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 992px) {
+  .game-header {
+    grid-template-columns: 1fr;
+  }
+  
+  .game-cover {
+    height: 300px;
+  }
+  
+  .requirements-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-details {
+    padding: 1rem;
+  }
+  
+  .active-screenshot {
+    height: 300px;
+  }
+  
+  .store-buttons {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .store-button {
+    width: 100%;
+    text-align: center;
+  }
+} 

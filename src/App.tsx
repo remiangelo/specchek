@@ -4,6 +4,7 @@ import { NextUIProvider } from '@nextui-org/react'
 import Home from './pages/Home'
 import ScanResults from './pages/ScanResults'
 import GameLibrary from './pages/GameLibrary'
+import GameDetails from './pages/GameDetails'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
@@ -22,6 +23,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/results" element={<ScanResults />} />
                 <Route path="/games" element={<GameLibrary />} />
+                <Route path="/games/:id" element={<GameDetails />} />
               </Routes>
             </main>
             <Footer />

@@ -1,4 +1,4 @@
-// Hardware specification types
+// Hardware specification types (for desktop/system scanning)
 export interface CPUSpec {
   name: string;
   brand: string;
@@ -40,36 +40,96 @@ export interface SystemSpec {
   };
 }
 
-// Game requirement types
-export interface GameRequirement {
+// Web-based system specs (for browser scanning)
+export interface SystemSpecs {
+  cpu: {
+    brand: string;
+    cores: number;
+  };
+  gpu: {
+    vendor: string;
+    renderer: string;
+  };
+  memory: {
+    total: string;
+  };
+  os: {
+    name: string;
+    version: string;
+    platform: string;
+  };
+  browser: {
+    name: string;
+    version: string;
+  };
+  screen: {
+    width: number;
+    height: number;
+    colorDepth: number;
+  };
+}
+
+// Game Requirements interface
+export interface GameRequirements {
+  os: string[];
   cpu: string;
   gpu: string;
-  ram: number;
-  storage: number;
-  os: string[];
+  ram: number; // in GB
+  storage: number; // in GB
+  directX?: string;
+  additionalNotes?: string;
 }
 
+// Game interface
 export interface Game {
-  id: string;
+  id: number;
   title: string;
   coverImage: string;
-  releaseDate: string;
+  logoImage?: string; // Optional logo image
   developer: string;
   publisher: string;
+  releaseDate: string; // ISO Date format
   genre: string[];
-  minimumRequirements: GameRequirement;
-  recommendedRequirements: GameRequirement;
+  tags?: string[];
+  price?: string;
+  description?: string;
+  shortDescription?: string;
+  minimumRequirements: GameRequirements;
+  recommendedRequirements: GameRequirements;
+  website?: string;
+  storeLinks?: {
+    steam?: string;
+    epic?: string;
+    gog?: string;
+    official?: string;
+    [key: string]: string | undefined;
+  };
+  rating?: {
+    score: number;
+    outOf: number;
+    source: string;
+  }[];
+  screenshots?: string[];
+  videos?: {
+    thumbnail: string;
+    url: string;
+    title: string;
+  }[];
 }
 
-// Compatibility result
+// Compatibility level enum
 export enum CompatibilityLevel {
-  NOT_COMPATIBLE = "NOT_COMPATIBLE",
+  RECOMMENDED = "RECOMMENDED",
   MINIMUM = "MINIMUM",
-  RECOMMENDED = "RECOMMENDED"
+  NOT_COMPATIBLE = "NOT_COMPATIBLE"
 }
 
-export interface GameCompatibility {
+// Compatibility result interface
+export interface CompatibilityResult {
   game: Game;
   level: CompatibilityLevel;
   issues?: string[];
-} 
+}
+
+// Alias for backward compatibility
+export type GameCompatibility = CompatibilityResult; 

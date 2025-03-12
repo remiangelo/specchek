@@ -7,7 +7,7 @@ export const getAllGames = (): Game[] => {
 };
 
 // Get a specific game by ID
-export const getGameById = (id: string): Game | undefined => {
+export const getGameById = (id: number): Game | undefined => {
   return games.find(game => game.id === id);
 };
 

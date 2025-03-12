@@ -1,212 +1,217 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Card, CardHeader, CardBody, CardFooter, Button, Input } from '@nextui-org/react';
-import { MagnifyingGlassIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
-
-// Game item component with animations
-const GameCard = ({ game, index }: { game: any, index: number }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 + 0.2, type: "spring", stiffness: 100 }}
-      whileHover={{ 
-        y: -10,
-        transition: { duration: 0.2 }
-      }}
-    >
-      <Card className="brutal-card h-full" isHoverable isPressable>
-        <CardHeader className="p-0">
-          <div className="w-full aspect-video overflow-hidden brutal-border relative">
-            <img 
-              src={game.coverImage} 
-              alt={game.title} 
-              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-              <p className="text-white text-sm font-bold">{game.title}</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardBody className="pb-0">
-          <h4 className="text-lg font-bold mb-1">{game.title}</h4>
-          <p className="text-sm text-gray-600">
-            {game.developer} • {game.releaseDate.split('-')[0]}
-          </p>
-        </CardBody>
-        <CardFooter>
-          <Button 
-            size="sm" 
-            radius="full" 
-            variant="flat" 
-            color="primary"
-            className="w-full"
-          >
-            View Details
-          </Button>
-        </CardFooter>
-      </Card>
-    </motion.div>
-  );
-};
-
-// Background decorative elements
-const BackgroundElements = () => (
-  <div className="absolute inset-0 -z-10 overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-cyan-500/5" />
-    <motion.div 
-      className="absolute -top-[20%] -left-[10%] h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"
-      animate={{ 
-        x: [0, 100, 0],
-        y: [0, 50, 0]
-      }}
-      transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }}
-    />
-    <motion.div 
-      className="absolute top-[40%] -right-[10%] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl"
-      animate={{ 
-        x: [0, -100, 0],
-        y: [0, -50, 0]
-      }}
-      transition={{ duration: 15, repeat: Infinity, repeatType: "reverse" }}
-    />
-  </div>
-);
+import { Game } from '../types';
+import { fetchGames, searchGames } from '../services/gameApiService';
+import './GameLibrary.css';
 
 const GameLibrary = () => {
-  console.log('GameLibrary component rendered');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const gamesPerPage = 12;
 
-  // Mock game data
-  const mockGames = [
-    { 
-      id: 1, 
-      title: 'Cyberpunk 2077', 
-      developer: 'CD Projekt Red',
-      releaseDate: '2020-12-10',
-      coverImage: 'https://via.placeholder.com/300x200?text=Cyberpunk+2077'
-    },
-    { 
-      id: 2, 
-      title: 'Red Dead Redemption 2', 
-      developer: 'Rockstar Games',
-      releaseDate: '2018-10-26',
-      coverImage: 'https://via.placeholder.com/300x200?text=RDR2'
-    },
-    { 
-      id: 3, 
-      title: 'The Witcher 3', 
-      developer: 'CD Projekt Red',
-      releaseDate: '2015-05-19',
-      coverImage: 'https://via.placeholder.com/300x200?text=Witcher+3'
-    },
-    { 
-      id: 4, 
-      title: 'Elden Ring', 
-      developer: 'FromSoftware',
-      releaseDate: '2022-02-25',
-      coverImage: 'https://via.placeholder.com/300x200?text=Elden+Ring'
-    },
-    { 
-      id: 5, 
-      title: 'God of War Ragnarök', 
-      developer: 'Santa Monica Studio',
-      releaseDate: '2022-11-09',
-      coverImage: 'https://via.placeholder.com/300x200?text=God+of+War'
-    },
-    { 
-      id: 6, 
-      title: 'Horizon Forbidden West', 
-      developer: 'Guerrilla Games',
-      releaseDate: '2022-02-18',
-      coverImage: 'https://via.placeholder.com/300x200?text=Horizon'
+  // Fetch games on component mount
+  useEffect(() => {
+    if (!isSearching) {
+      console.log("GameLibrary: Initiating game loading for page", currentPage);
+      loadGames();
     }
-  ];
+  }, [currentPage, isSearching]);
 
-  // Filter games based on search
-  const filteredGames = mockGames.filter(game => 
-    game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    game.developer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const loadGames = async () => {
+    try {
+      console.log("GameLibrary: Starting to load games...");
+      setLoading(true);
+      setError(null);
+      
+      console.time("fetchGames");
+      const fetchedGames = await fetchGames(currentPage, gamesPerPage);
+      console.timeEnd("fetchGames");
+      
+      console.log(`GameLibrary: Received ${fetchedGames.length} games from API`);
+      
+      if (fetchedGames.length === 0) {
+        console.log('No games returned from API');
+        setError('No games found. The IGDB API might be experiencing issues or rate limits.');
+      } else {
+        console.log("GameLibrary: Setting games in state:", fetchedGames.map(g => g.title).join(", "));
+        setGames(fetchedGames);
+      }
+    } catch (err) {
+      console.error('Error loading games:', err);
+      setError('Failed to load games. Please try again later.');
+    } finally {
+      setLoading(false);
+      console.log("GameLibrary: Finished loading attempt");
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!searchTerm.trim()) {
+      console.log("GameLibrary: Empty search, showing all games");
+      setIsSearching(false);
+      loadGames();
+      return;
+    }
+
+    try {
+      console.log(`GameLibrary: Searching for "${searchTerm}"...`);
+      setLoading(true);
+      setError(null);
+      setIsSearching(true);
+      
+      console.time("searchGames");
+      const searchResults = await searchGames(searchTerm);
+      console.timeEnd("searchGames");
+      
+      console.log(`GameLibrary: Search returned ${searchResults.length} results`);
+      
+      if (searchResults.length === 0) {
+        console.log(`GameLibrary: No results found for "${searchTerm}"`);
+        setError(`No games found matching "${searchTerm}". Try a different search term.`);
+      } else {
+        console.log("GameLibrary: Setting search results in state");
+        setGames(searchResults);
+      }
+    } catch (err) {
+      console.error('Error searching games:', err);
+      setError('Search failed. Please try again.');
+    } finally {
+      setLoading(false);
+      console.log("GameLibrary: Finished search attempt");
+    }
+  };
+
+  const handleRetry = () => {
+    if (isSearching && searchTerm) {
+      handleSearch(new Event('submit') as any);
+    } else {
+      setIsSearching(false);
+      loadGames();
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setIsSearching(false);
+    setCurrentPage(1);
+    loadGames();
+  };
+
+  const nextPage = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
 
   return (
-    <div className="py-8 relative overflow-hidden">
-      <BackgroundElements />
+    <div className="game-library">
+      <h1>Game Library</h1>
       
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-8"
-      >
-        <h1 className="text-4xl font-bold mb-2">
-          Game <span className="text-transparent bg-clip-text bg-gradient-to-r from-brutalist-accent to-brutalist-secondary">Library</span>
-        </h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Browse our collection of games and see which ones are compatible with your system
-        </p>
-      </motion.div>
-      
-      <motion.div 
-        className="mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
-          <Button
-            as={Link}
-            to="/"
-            variant="light"
-            startContent={<ArrowLeftIcon className="h-4 w-4" />}
-            className="self-start"
+      <form onSubmit={handleSearch} className="search-form">
+        <input
+          type="text"
+          placeholder="Search games..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        <button type="submit" className="search-button">Search</button>
+        {searchTerm && (
+          <button 
+            type="button" 
+            onClick={clearSearch}
+            className="clear-button"
           >
-            Back to Home
-          </Button>
-          
-          <div className="w-full max-w-md">
-            <Input
-              placeholder="Search games..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              startContent={<MagnifyingGlassIcon className="h-5 w-5 text-default-400" />}
-              className="brutal-border"
-              classNames={{
-                inputWrapper: "bg-white brutal-border border-2 border-brutalist-dark px-3",
-              }}
-              radius="none"
-              variant="bordered"
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGames.map((game, index) => (
-            <GameCard key={game.id} game={game} index={index} />
-          ))}
-        </div>
-        
-        {filteredGames.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-center p-12 brutal-card mt-8"
-          >
-            <p className="text-xl font-bold mb-2">No games found</p>
-            <p className="text-gray-600">Try a different search term</p>
-          </motion.div>
+            Clear
+          </button>
         )}
-      </motion.div>
-      
-      <motion.div
-        className="w-full h-1 bg-gradient-to-r from-brutalist-accent via-brutalist-secondary to-brutalist-accent"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 1, delay: 0.5 }}
-        style={{ transformOrigin: 'left' }}
-      />
+      </form>
+
+      {loading ? (
+        <div className="loading">
+          <div className="loading-spinner"></div>
+          <p>{isSearching ? `Searching for "${searchTerm}"...` : `Loading games (page ${currentPage})...`}</p>
+        </div>
+      ) : error ? (
+        <div className="error">
+          <p>{error}</p>
+          <button onClick={handleRetry} className="retry-button">Retry</button>
+          {isSearching && (
+            <button onClick={clearSearch} className="retry-button">Show All Games</button>
+          )}
+        </div>
+      ) : (
+        <>
+          {games.length === 0 ? (
+            <div className="no-games">
+              <p>No games found. {isSearching ? 'Try a different search term.' : 'There might be an issue with the IGDB API connection.'}</p>
+              {isSearching ? (
+                <button onClick={clearSearch} className="retry-button">Show All Games</button>
+              ) : (
+                <button onClick={handleRetry} className="retry-button">Retry Loading</button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="results-info">
+                {isSearching ? (
+                  <p>Found {games.length} games matching "{searchTerm}"</p>
+                ) : (
+                  <p>Showing page {currentPage} • {games.length} games</p>
+                )}
+              </div>
+              
+              <div className="games-grid">
+                {games.map(game => (
+                  <Link to={`/games/${game.id}`} key={game.id} className="game-card">
+                    <div className="game-image">
+                      <img src={game.coverImage} alt={game.title} />
+                    </div>
+                    <div className="game-info">
+                      <h3>{game.title}</h3>
+                      <p className="game-developer">{game.developer}</p>
+                      <div className="game-genres">
+                        {game.genre.slice(0, 3).map((genre, index) => (
+                          <span key={index} className="genre-tag">{genre}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+          
+          {!isSearching && games.length > 0 && (
+            <div className="pagination">
+              <button 
+                onClick={prevPage} 
+                disabled={currentPage === 1}
+                className="page-button"
+              >
+                Previous
+              </button>
+              <span className="page-indicator">Page {currentPage}</span>
+              <button 
+                onClick={nextPage}
+                className="page-button"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
