@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brutalist-lightgray text-brutalist-gray font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-mono font-bold;
+  }
+}
+
+@layer components {
+  .brutal-border {
+    @apply border-2 border-brutalist-dark;
+  }
+  
+  .brutal-btn {
+    @apply font-mono px-4 py-2 bg-white brutal-border shadow-brutal 
+           transition-transform duration-100 hover:-translate-y-1 hover:translate-x-1 
+           active:translate-y-0 active:translate-x-0 active:shadow-none text-brutalist-dark;
+  }
+  
+  .brutal-btn-accent {
+    @apply brutal-btn bg-brutalist-accent text-white;
+  }
+  
+  .brutal-btn-secondary {
+    @apply brutal-btn bg-brutalist-secondary text-white;
+  }
+  
+  .brutal-card {
+    @apply brutal-border bg-white p-4 shadow-brutal;
+  }
+  
+  .brutal-input {
+    @apply brutal-border px-4 py-2 bg-white focus:outline-none focus:ring-0 
+           focus:border-brutalist-accent w-full font-mono;
+  }
+}
