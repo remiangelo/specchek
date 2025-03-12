@@ -1,64 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { SystemSpec } from '../types';
-import { getSystemSpecs } from '../services/hardwareService';
+import { scanSystem, SystemSpecs } from '../services/hardwareService';
 
 export const useSystemInfo = () => {
   console.log('useSystemInfo hook initialized');
-  
-  // Use React Query to fetch system specs
-  const {
-    data: systemSpecs,
-    error,
-    isLoading,
-    isError,
-    refetch
-  } = useQuery<SystemSpec>({
+  const [isScanning, setIsScanning] = useState(false);
+
+  const { 
+    data: systemSpecs, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery<SystemSpecs>({
     queryKey: ['systemSpecs'],
-    queryFn: getSystemSpecs,
-    // Don't refetch on window focus or component remount
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    retry: 1,
-    staleTime: Infinity
+    queryFn: scanSystem,
+    staleTime: Infinity, // Don't auto-refetch
+    enabled: false, // Don't run automatically on component mount
   });
 
   console.log('systemSpecs from useQuery:', systemSpecs);
-  
-  // Handle errors more gracefully
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isError && error instanceof Error) {
-      console.error('Error in useSystemInfo:', error);
-      setErrorMessage(error.message || 'Failed to scan system hardware');
-    } else if (isError) {
-      console.error('Unknown error in useSystemInfo');
-      setErrorMessage('An unknown error occurred while scanning your system');
-    }
-  }, [isError, error]);
-
-  // Function to trigger a manual scan
-  const scanSystem = async () => {
-    console.log('scanSystem called');
+  // Function to manually scan hardware
+  const scanHardware = async () => {
+    console.log('scanHardware called');
+    setIsScanning(true);
     try {
-      setErrorMessage(null);
       await refetch();
-    } catch (err) {
-      console.error('Error in scanSystem:', err);
-      if (err instanceof Error) {
-        setErrorMessage(err.message || 'Failed to scan system hardware');
-      } else {
-        setErrorMessage('An unknown error occurred while scanning your system');
-      }
+    } catch (error) {
+      console.error('Error in scanHardware:', error);
+    } finally {
+      setIsScanning(false);
     }
   };
 
+  if (error) {
+    console.error('Error in useSystemInfo:', error);
+  }
+
   return {
     systemSpecs,
-    isLoading,
-    isError,
-    errorMessage,
-    scanSystem
+    isLoading: isLoading || isScanning,
+    error,
+    scanSystem: scanHardware
   };
 }; 
