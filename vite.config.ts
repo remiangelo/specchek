@@ -7,4 +7,16 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.cjs',
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@nextui-org/react', 'framer-motion'],
+          'icons': ['@heroicons/react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000 // Increase warning limit to reduce noise
+  }
 })
