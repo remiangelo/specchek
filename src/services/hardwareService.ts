@@ -80,21 +80,28 @@ const getCPUInfo = (): SystemSpecs['cpu'] => {
 const getGPUInfo = (): SystemSpecs['gpu'] => {
   try {
     const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    // Explicitly type the context as WebGLRenderingContext
+    const gl = canvas.getContext('webgl') as WebGLRenderingContext || 
+              canvas.getContext('experimental-webgl') as WebGLRenderingContext;
     
     if (!gl) {
       return { vendor: 'Unknown', renderer: 'Unknown' };
     }
     
+    // Explicitly type the extension
     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     if (!debugInfo) {
       return { vendor: 'Unknown', renderer: 'WebGL supported but details unavailable' };
     }
     
-    const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'Unknown';
-    const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Unknown';
+    // Define the parameters we need
+    const UNMASKED_VENDOR_WEBGL = debugInfo.UNMASKED_VENDOR_WEBGL;
+    const UNMASKED_RENDERER_WEBGL = debugInfo.UNMASKED_RENDERER_WEBGL;
     
-    return { vendor, renderer };
+    const vendor = gl.getParameter(UNMASKED_VENDOR_WEBGL) || 'Unknown';
+    const renderer = gl.getParameter(UNMASKED_RENDERER_WEBGL) || 'Unknown';
+    
+    return { vendor: String(vendor), renderer: String(renderer) };
   } catch (error) {
     console.error('Error detecting GPU:', error);
     return { vendor: 'Error', renderer: 'Unable to detect' };
