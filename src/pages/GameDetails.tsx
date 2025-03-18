@@ -14,10 +14,28 @@ const GameDetails = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeScreenshot, setActiveScreenshot] = useState<string | null>(null);
 
+  // Helper function to validate and parse game ID
+  const getValidGameId = (): number | null => {
+    if (!id) {
+      console.error('[GameDetails] No game ID provided in URL');
+      return null;
+    }
+    
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId) || parsedId <= 0) {
+      console.error(`[GameDetails] Invalid game ID: ${id}`);
+      return null;
+    }
+    
+    return parsedId;
+  };
+
   useEffect(() => {
     const loadGame = async () => {
-      if (!id) {
-        setError('Game ID is missing');
+      const gameId = getValidGameId();
+      
+      if (!gameId) {
+        setError('Invalid game ID. Please select a game from the library.');
         setLoading(false);
         return;
       }
@@ -25,7 +43,9 @@ const GameDetails = () => {
       try {
         setLoading(true);
         setError(null);
-        const gameData = await fetchGameDetails(parseInt(id));
+        console.log(`[GameDetails] Loading game with ID: ${gameId}`);
+        const gameData = await fetchGameDetails(gameId);
+        console.log(`[GameDetails] Successfully loaded game: ${gameData.title} (ID: ${gameData.id})`);
         setGame(gameData);
         
         // Set the first screenshot as active if available
@@ -33,12 +53,34 @@ const GameDetails = () => {
           setActiveScreenshot(gameData.screenshots[0]);
         }
       } catch (err) {
-        console.error('Error loading game details:', err);
-        // Check if it's a "not found" error
-        if (err instanceof Error && err.message.includes('not found')) {
-          setError(`Game with ID ${id} was not found. It may have been removed or the ID is incorrect.`);
+        console.error('[GameDetails] Error loading game details:', err);
+        
+        // Provide more specific error messages based on the error
+        if (err instanceof Error) {
+          const errorMessage = err.message.toLowerCase();
+          
+          if (errorMessage.includes('not found')) {
+            setError(`Game with ID ${gameId} was not found. This might be due to an invalid game ID or the game being removed from the database.`);
+          } else if (errorMessage.includes('network error')) {
+            setError('Unable to connect to the game database. Please check your internet connection and ensure the API proxy is accessible.');
+          } else if (errorMessage.includes('timeout')) {
+            setError('Request timed out while fetching game data. The server might be slow or overloaded.');
+          } else if (errorMessage.includes('cors')) {
+            setError('CORS policy prevented loading game data. This is a technical issue with the API access.');
+          } else if (errorMessage.includes('authentication') || errorMessage.includes('auth') || errorMessage.includes('token')) {
+            setError('Authentication error with the game database. The API credentials might be invalid or expired.');
+          } else {
+            setError(`Error loading game: ${err.message}. Please try again later.`);
+          }
+          
+          // Log detailed information for debugging
+          console.error(`[GameDetails] Detailed error for game ID ${gameId}:`, {
+            message: err.message,
+            stack: err.stack,
+            gameId: gameId
+          });
         } else {
-          setError('Failed to load game details. The API may be experiencing issues.');
+          setError('An unknown error occurred. Please try again later.');
         }
       } finally {
         setLoading(false);
@@ -49,23 +91,44 @@ const GameDetails = () => {
   }, [id]);
 
   const handleRetry = () => {
-    if (id) {
+    const gameId = getValidGameId();
+    
+    if (gameId) {
+      console.log(`[GameDetails] Retrying game load with ID: ${gameId}`);
       setLoading(true);
       setError(null);
-      fetchGameDetails(parseInt(id))
+      fetchGameDetails(gameId)
         .then(gameData => {
+          console.log(`[GameDetails] Retry successful for game: ${gameData.title} (ID: ${gameData.id})`);
           setGame(gameData);
           if (gameData.screenshots && gameData.screenshots.length > 0) {
             setActiveScreenshot(gameData.screenshots[0]);
           }
         })
         .catch(err => {
-          console.error('Error retrying game details:', err);
-          setError('Failed to load game details. Please try again later.');
+          console.error('[GameDetails] Error retrying game details:', err);
+          
+          // Provide more specific error messages based on the error
+          if (err instanceof Error) {
+            const errorMessage = err.message.toLowerCase();
+            
+            if (errorMessage.includes('not found')) {
+              setError(`Game with ID ${gameId} was not found after retry. Please try a different game.`);
+            } else if (errorMessage.includes('network')) {
+              setError('Still unable to connect to the game database. Please check your internet connection or try again later.');
+            } else {
+              setError(`Failed to load game details: ${err.message}. Please try again later.`);
+            }
+          } else {
+            setError('An unknown error occurred during retry. Please try again later.');
+          }
         })
         .finally(() => {
           setLoading(false);
         });
+    } else {
+      console.error('[GameDetails] Cannot retry - invalid game ID');
+      setError('Invalid game ID. Please return to the game library.');
     }
   };
 

@@ -7,6 +7,7 @@ import GameLibrary from './pages/GameLibrary'
 import GameDetails from './pages/GameDetails'
 import HardwareScan from './pages/HardwareScan'
 import Layout from './components/Layout'
+import IgdbApiTest from './components/IgdbApiTest'
 
 // Create a client for React Query
 const queryClient = new QueryClient()
@@ -23,6 +24,7 @@ function App() {
               <Route path="/results" element={<ScanResults />} />
               <Route path="/games" element={<GameLibrary />} />
               <Route path="/games/:id" element={<GameDetails />} />
+              <Route path="/api-test" element={<IgdbApiTest />} />
             </Route>
           </Routes>
         </Router>

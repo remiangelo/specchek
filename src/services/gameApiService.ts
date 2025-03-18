@@ -277,7 +277,7 @@ export const searchGames = async (searchTerm: string): Promise<Game[]> => {
         game.title.toLowerCase().includes(searchTermLower) ||
         game.developer.toLowerCase().includes(searchTermLower) ||
         game.publisher.toLowerCase().includes(searchTermLower) ||
-        game.tags.some(tag => tag.toLowerCase().includes(searchTermLower)) ||
+        (game.tags && game.tags.some(tag => tag.toLowerCase().includes(searchTermLower))) ||
         game.genre.some(genre => genre.toLowerCase().includes(searchTermLower))
       );
       
@@ -297,7 +297,7 @@ export const searchGames = async (searchTerm: string): Promise<Game[]> => {
       game.title.toLowerCase().includes(searchTermLower) ||
       game.developer.toLowerCase().includes(searchTermLower) ||
       game.publisher.toLowerCase().includes(searchTermLower) ||
-      game.tags.some(tag => tag.toLowerCase().includes(searchTermLower)) ||
+      (game.tags && game.tags.some(tag => tag.toLowerCase().includes(searchTermLower))) ||
       game.genre.some(genre => genre.toLowerCase().includes(searchTermLower))
     );
     

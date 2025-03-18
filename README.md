@@ -20,6 +20,89 @@ VITE_IGDB_CLIENT_ID=your_client_id_here
 VITE_IGDB_CLIENT_SECRET=your_client_secret_here
 ```
 
+### CORS Issues & Server-Side Proxy
+
+Due to CORS restrictions, direct browser requests to the IGDB API may fail. The application includes:
+
+1. Multiple CORS proxies that it tries when connecting to the API
+2. A robust fallback to local mock data when API connections fail
+
+For a more reliable production setup, consider implementing a server-side proxy:
+
+1. Create a simple Express.js server with a proxy endpoint
+2. Store your API credentials securely on the server
+3. Forward requests from your frontend to the IGDB API through your server
+
+Example server-side proxy code:
+```javascript
+// server.js
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.text());
+
+// Authentication
+let authToken = null;
+let tokenExpiry = 0;
+
+async function getAuthToken() {
+  if (authToken && tokenExpiry > Date.now()) {
+    return authToken;
+  }
+  
+  const response = await axios.post(
+    'https://id.twitch.tv/oauth2/token',
+    null,
+    {
+      params: {
+        client_id: process.env.IGDB_CLIENT_ID,
+        client_secret: process.env.IGDB_CLIENT_SECRET,
+        grant_type: 'client_credentials'
+      }
+    }
+  );
+  
+  authToken = response.data.access_token;
+  tokenExpiry = Date.now() + (response.data.expires_in - 60) * 1000;
+  return authToken;
+}
+
+// IGDB API proxy endpoint
+app.post('/api/igdb/:endpoint', async (req, res) => {
+  try {
+    const token = await getAuthToken();
+    const response = await axios.post(
+      `https://api.igdb.com/v4/${req.params.endpoint}`,
+      req.body,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'text/plain'
+        }
+      }
+    );
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('IGDB API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data || { message: 'Internal server error' }
+    });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+```
+
+Then update your frontend to use this proxy instead of direct API calls.
+
 ## Features
 
 - **Hardware Scanning**: Detects your CPU, GPU, RAM, and storage specifications
