@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fetchGameDetails } from '../services/gameApiService';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fetchGameDetails } from '../services/igdbApiService';
 import { Game } from '../types';
 import GameRequirements from '../components/GameRequirements';
 import { Tabs, Tab } from '@nextui-org/react';
@@ -32,10 +32,10 @@ const GameDetails = () => {
         if (gameData.screenshots && gameData.screenshots.length > 0) {
           setActiveScreenshot(gameData.screenshots[0]);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error loading game details:', err);
         // Check if it's a "not found" error
-        if (err.message && err.message.includes('not found')) {
+        if (err instanceof Error && err.message.includes('not found')) {
           setError(`Game with ID ${id} was not found. It may have been removed or the ID is incorrect.`);
         } else {
           setError('Failed to load game details. The API may be experiencing issues.');
@@ -71,6 +71,67 @@ const GameDetails = () => {
 
   const goBack = () => {
     navigate('/games');
+  };
+
+  // Display price if available
+  const renderPrice = () => {
+    if (game?.price) {
+      return (
+        <div className="mt-4 md:mt-0">
+          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {game.price}
+          </span>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Render game store links if available
+  const renderStoreLinks = () => {
+    if (!game?.storeLinks || Object.keys(game.storeLinks).length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-3">Available on</h3>
+        <div className="flex flex-wrap gap-3">
+          {game.storeLinks.steam && (
+            <a href={game.storeLinks.steam} target="_blank" rel="noopener noreferrer" 
+              className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                <path fill="currentColor" d="M496 256c0 137-111.2 248-248.4 248-113.8 0-209.6-76.3-239-180.4l95.2 39.3c6.4 32.1 34.9 56.4 68.9 56.4 39.2 0 71.9-32.4 70.2-73.5l84.5-60.2c52.1 1.3 95.8-40.9 95.8-93.5 0-51.6-42-93.5-93.7-93.5s-93.7 42-93.7 93.5v1.2L176.6 279c-15.5-.9-30.7 3.4-43.5 12.1L0 236.1C10.2 108.4 117.1 8 247.6 8 384.8 8 496 119 496 256zM155.7 384.3l-30.5-12.6a52.79 52.79 0 0 0 27.2 25.8c26.9 11.2 57.8-1.6 69-28.4 5.4-13 5.5-27.3.1-40.3-5.4-13-15.5-23.2-28.5-28.6-12.9-5.4-26.7-5.2-38.9-.6l31.5 13c19.8 8.2 29.2 30.9 20.9 50.7-8.3 19.9-31 29.2-50.8 21zm173.8-129.9c-34.4 0-62.4-28-62.4-62.3s28-62.3 62.4-62.3 62.4 28 62.4 62.3-27.9 62.3-62.4 62.3zm.1-15.6c25.9 0 46.9-21 46.9-46.8 0-25.9-21-46.8-46.9-46.8s-46.9 21-46.9 46.8c.1 25.8 21.1 46.8 46.9 46.8z"/>
+              </svg>
+              Steam
+            </a>
+          )}
+          {game.storeLinks.epic && (
+            <a href={game.storeLinks.epic} target="_blank" rel="noopener noreferrer" 
+              className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 256 301" xmlns="http://www.w3.org/2000/svg">
+                <path fill="currentColor" d="M28.6 242L0 270.7L0 0L181.3 0L121.7 60.7L60.7 60.7L60.7 181.3L28.6 242Z"/>
+                <path fill="currentColor" d="M84.3 242L84.3 84.3L145 84.3L145 204.9L204.9 204.9L255.9 255.9L84.3 255.9L84.3 242Z"/>
+              </svg>
+              Epic Games
+            </a>
+          )}
+          {game.storeLinks.gog && (
+            <a href={game.storeLinks.gog} target="_blank" rel="noopener noreferrer" 
+              className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+              <span className="font-bold mr-1">GOG</span>
+              .com
+            </a>
+          )}
+          {game.storeLinks.official && (
+            <a href={game.storeLinks.official} target="_blank" rel="noopener noreferrer" 
+              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              Official Site
+            </a>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -139,7 +200,7 @@ const GameDetails = () => {
               <div className="absolute inset-0 z-0">
                 <img 
                   src={activeScreenshot} 
-                  alt={game.name} 
+                  alt={game.title} 
                   className="w-full h-full object-cover blur-xl transform scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
@@ -152,36 +213,42 @@ const GameDetails = () => {
                 <div className="w-32 h-44 md:w-48 md:h-64 flex-shrink-0 overflow-hidden rounded-lg shadow-xl">
                   <img 
                     src={game.coverImage} 
-                    alt={game.name} 
+                    alt={game.title} 
                     className="w-full h-full object-cover"
                   />
                 </div>
                 
                 {/* Game info */}
                 <div className="flex-grow">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">{game.name}</h1>
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">{game.title}</h1>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {game.genres?.map((genre, index) => (
+                    {game.genre?.map((genre, index) => (
                       <span 
                         key={index} 
-                        className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                        className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
                       >
                         {genre}
                       </span>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-3 mb-6">
-                    {game.platforms?.map((platform, index) => (
-                      <span 
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {game.tags?.map((platform, index) => (
+                      <span
                         key={index}
-                        className="text-sm text-gray-600 dark:text-gray-400"
+                        className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded text-sm"
                       >
                         {platform}
                       </span>
                     ))}
                   </div>
+                  
+                  {/* Add price display */}
+                  {renderPrice()}
                 </div>
               </div>
+              
+              {/* Add store links */}
+              {renderStoreLinks()}
             </div>
           </div>
 
@@ -203,7 +270,11 @@ const GameDetails = () => {
                   {/* Description */}
                   <div className="mb-8">
                     <h2 className="text-2xl font-bold mb-4">About</h2>
-                    <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: game.description }} />
+                    <div className="prose dark:prose-invert max-w-none">
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: game.description || 'No description available.'
+                      }} />
+                    </div>
                   </div>
               
                   {/* Screenshots */}
@@ -220,7 +291,7 @@ const GameDetails = () => {
                           >
                             <img 
                               src={screenshot} 
-                              alt={`${game.name} screenshot ${index + 1}`} 
+                              alt={`${game.title} screenshot ${index + 1}`} 
                               className="w-full h-full object-cover"
                             />
                           </motion.div>
@@ -233,7 +304,6 @@ const GameDetails = () => {
                   <div className="py-4">
                     <GameRequirements 
                       gameId={game.id.toString()}
-                      gameName={game.name}
                     />
                   </div>
                 </Tab>
@@ -245,7 +315,7 @@ const GameDetails = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Platforms</h3>
                         <div className="flex flex-wrap gap-2">
-                          {game.platforms?.map((platform, index) => (
+                          {game.tags?.map((platform, index) => (
                             <span 
                               key={index} 
                               className="px-3 py-1 bg-gray-200 dark:bg-gray-800 rounded-full text-sm"
@@ -259,7 +329,7 @@ const GameDetails = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Genres</h3>
                         <div className="flex flex-wrap gap-2">
-                          {game.genres?.map((genre, index) => (
+                          {game.genre?.map((genre, index) => (
                             <span 
                               key={index} 
                               className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
@@ -285,9 +355,9 @@ const GameDetails = () => {
                         <p>{game.publisher || 'Unknown'}</p>
                       </div>
                       
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Age Rating</h3>
-                        <p>{game.ageRating || 'Not rated'}</p>
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold mb-2">Rating</h3>
+                        <p>{typeof game.rating === 'string' ? game.rating : 'Not rated'}</p>
                       </div>
                     </div>
                   </div>
@@ -297,7 +367,28 @@ const GameDetails = () => {
 
             {/* Sidebar - right 1/3 */}
             <div>
-              {/* ... existing sidebar content ... */}
+              {/* Additional details for the sidebar */}
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6">
+                {/* Game rating section */}
+                {game.rating && game.rating.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Ratings</h3>
+                    <div className="space-y-3">
+                      {game.rating.map((rating, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">{rating.source}</span>
+                          <div className="flex items-center">
+                            <span className="font-medium text-lg">{rating.score}/</span>
+                            <span className="text-gray-500 text-sm">{rating.outOf}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* ... existing sidebar content ... */}
+              </div>
             </div>
           </div>
 

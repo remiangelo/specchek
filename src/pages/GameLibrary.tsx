@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Game } from '../types';
-import { fetchGames, searchGames } from '../services/gameApiService';
+import { fetchGames, searchGames } from '../services/igdbApiService';
 import './GameLibrary.css';
 
 const GameCard = ({ game, index }: { game: Game, index: number }) => {
@@ -55,15 +55,8 @@ const GameLibrary = () => {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const gamesPerPage = 12;
 
-  // Fetch games on component mount
-  useEffect(() => {
-    if (!isSearching) {
-      console.log("GameLibrary: Initiating game loading for page", currentPage);
-      loadGames();
-    }
-  }, [currentPage, isSearching]);
-
-  const loadGames = async () => {
+  // Define loadGames with useCallback
+  const loadGames = useCallback(async () => {
     try {
       console.log("GameLibrary: Starting to load games...");
       setLoading(true);
@@ -89,7 +82,15 @@ const GameLibrary = () => {
       setLoading(false);
       console.log("GameLibrary: Finished loading attempt");
     }
-  };
+  }, [currentPage, gamesPerPage]);
+
+  // Fetch games on component mount
+  useEffect(() => {
+    if (!isSearching) {
+      console.log("GameLibrary: Initiating game loading for page", currentPage);
+      loadGames();
+    }
+  }, [currentPage, isSearching, loadGames]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +132,7 @@ const GameLibrary = () => {
 
   const handleRetry = () => {
     if (isSearching && searchTerm) {
-      handleSearch(new Event('submit') as any);
+      handleSearch(new Event('submit') as React.FormEvent<HTMLFormElement>);
     } else {
       setIsSearching(false);
       loadGames();

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardBody, CardHeader, Chip, Button, Tooltip, Progress } from '@nextui-org/react';
 import { CheckCircleIcon, XCircleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { useSystemInfo } from '../hooks/useSystemInfo';
+import { fetchGameRequirements } from '../services/igdbApiService';
+import { GameRequirements as GameReqType } from '../types';
 
 interface GameRequirement {
   name: string;
@@ -13,10 +15,10 @@ interface GameRequirement {
 
 interface GameRequirementsProps {
   gameId?: string;
-  gameName?: string;
   className?: string;
 }
 
+// Default requirements as fallback
 const defaultRequirements: GameRequirement[] = [
   {
     name: "CPU",
@@ -44,6 +46,7 @@ const defaultRequirements: GameRequirement[] = [
   }
 ];
 
+// Preset games for demo purposes (will be replaced with API data)
 const presetGames = [
   { id: "cyberpunk", name: "Cyberpunk 2077", requirements: [
     { name: "CPU", description: "Quad-core Intel or AMD processor", minScore: 60, recommendedScore: 80 },
@@ -70,6 +73,86 @@ const presetGames = [
     { name: "Storage", description: "60GB available space", minScore: 50, recommendedScore: 50 }
   ]}
 ];
+
+// Convert IGDB requirements to our GameRequirement format
+const convertRequirementsToScores = (
+  gameReqs: { minimum: GameReqType; recommended: GameReqType } | null
+): GameRequirement[] => {
+  if (!gameReqs) {
+    return defaultRequirements;
+  }
+
+  const { minimum, recommended } = gameReqs;
+  
+  // Helper to estimate CPU score based on description
+  const estimateCpuScore = (cpuDesc: string): number => {
+    cpuDesc = cpuDesc.toLowerCase();
+    // Detect CPU generation and model
+    if (cpuDesc.includes('i9') || cpuDesc.includes('ryzen 9')) return 85;
+    if (cpuDesc.includes('i7') || cpuDesc.includes('ryzen 7')) return 75;
+    if (cpuDesc.includes('i5') || cpuDesc.includes('ryzen 5')) return 60;
+    if (cpuDesc.includes('i3') || cpuDesc.includes('ryzen 3')) return 45;
+    // Fallback to default scores based on req level
+    return 40;
+  };
+  
+  // Helper to estimate GPU score based on description
+  const estimateGpuScore = (gpuDesc: string): number => {
+    gpuDesc = gpuDesc.toLowerCase();
+    // NVIDIA cards
+    if (gpuDesc.includes('rtx 30') || gpuDesc.includes('rtx 40')) return 90;
+    if (gpuDesc.includes('rtx 20')) return 80;
+    if (gpuDesc.includes('gtx 16')) return 70;
+    if (gpuDesc.includes('gtx 10')) return 60;
+    if (gpuDesc.includes('gtx 9')) return 50;
+    // AMD cards
+    if (gpuDesc.includes('rx 6') || gpuDesc.includes('rx 7')) return 85;
+    if (gpuDesc.includes('rx 5')) return 75;
+    if (gpuDesc.includes('rx 4')) return 60;
+    if (gpuDesc.includes('rx 5')) return 50;
+    // Integrated
+    if (gpuDesc.includes('intel') && (gpuDesc.includes('iris') || gpuDesc.includes('xe'))) return 40;
+    if (gpuDesc.includes('vega')) return 45;
+    if (gpuDesc.includes('intel hd')) return 30;
+    // Fallback
+    return 45;
+  };
+  
+  // Helper to calculate RAM score (8GB = 50, scales linearly)
+  const calculateRamScore = (ramGB: number): number => {
+    const baseScore = 50; // 8GB gets 50 points
+    const baseRam = 8;
+    if (ramGB <= 0) return 30; // Default minimum
+    return Math.min(90, Math.max(30, Math.round(baseScore * (ramGB / baseRam))));
+  };
+  
+  return [
+    {
+      name: "CPU",
+      description: minimum.cpu,
+      minScore: estimateCpuScore(minimum.cpu),
+      recommendedScore: estimateCpuScore(recommended.cpu)
+    },
+    {
+      name: "GPU",
+      description: minimum.gpu,
+      minScore: estimateGpuScore(minimum.gpu),
+      recommendedScore: estimateGpuScore(recommended.gpu)
+    },
+    {
+      name: "RAM",
+      description: `${minimum.ram}GB RAM (Min) / ${recommended.ram}GB RAM (Rec)`,
+      minScore: calculateRamScore(minimum.ram),
+      recommendedScore: calculateRamScore(recommended.ram)
+    },
+    {
+      name: "Storage",
+      description: `${minimum.storage}GB available space`,
+      minScore: 50, // Storage is binary - either you have enough or you don't
+      recommendedScore: 50 
+    }
+  ];
+};
 
 const RequirementItem = ({ 
   requirement, 
@@ -115,7 +198,7 @@ const RequirementItem = ({
           )}
         </div>
         <Chip
-          color={statusColor as any}
+          color={statusColor as "default" | "primary" | "secondary" | "success" | "warning" | "danger"}
           variant="flat"
           startContent={<StatusIcon className="h-4 w-4" />}
           size="sm"
@@ -155,13 +238,13 @@ const RequirementItem = ({
   );
 };
 
-const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirementsProps) => {
+const GameRequirements = ({ gameId, className = "" }: GameRequirementsProps) => {
   const [selectedGameId, setSelectedGameId] = useState(gameId || presetGames[0].id);
   const [showDetails, setShowDetails] = useState(false);
-  
-  // Get current game requirements
-  const selectedGame = presetGames.find(game => game.id === selectedGameId) || presetGames[0];
-  const requirements = selectedGame.requirements || defaultRequirements;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [gameRequirements, setGameRequirements] = useState<GameRequirement[]>(defaultRequirements);
+  const [usingPreset, setUsingPreset] = useState(true);
   
   // Get system info
   const { 
@@ -169,6 +252,39 @@ const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirements
     scanHardware, 
     isScanning 
   } = useSystemInfo();
+  
+  // Fetch requirements from IGDB if we have an actual game ID (number)
+  useEffect(() => {
+    const fetchRequirements = async () => {
+      // Check if this is a real game ID (number) or one of our presets
+      const isRealGameId = gameId && !isNaN(Number(gameId));
+      
+      if (isRealGameId) {
+        try {
+          setLoading(true);
+          setError(null);
+          setUsingPreset(false);
+          
+          const requirements = await fetchGameRequirements(Number(gameId));
+          const formattedReqs = convertRequirementsToScores(requirements);
+          setGameRequirements(formattedReqs);
+        } catch (err) {
+          console.error("Failed to fetch game requirements:", err);
+          setError("Could not fetch requirements for this game. Using default values.");
+          setGameRequirements(defaultRequirements);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Use preset data
+        setUsingPreset(true);
+        const selectedGame = presetGames.find(game => game.id === selectedGameId);
+        setGameRequirements(selectedGame?.requirements || defaultRequirements);
+      }
+    };
+    
+    fetchRequirements();
+  }, [gameId, selectedGameId]);
   
   // Get system scores from specs
   const getSystemScore = (requirementName: string): number => {
@@ -203,7 +319,7 @@ const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirements
     let totalRecommendedScore = 0;
     let requirementsCount = 0;
     
-    requirements.forEach(req => {
+    gameRequirements.forEach(req => {
       const systemScore = getSystemScore(req.name);
       totalSystemScore += systemScore;
       totalMinScore += req.minScore;
@@ -228,26 +344,30 @@ const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirements
     <Card className={className}>
       <CardHeader className="flex flex-col items-start pb-0">
         <h3 className="text-xl font-bold">System Requirements Check</h3>
-        <div className="flex flex-wrap gap-2 my-2">
-          {presetGames.map(game => (
-            <Chip
-              key={game.id}
-              color={selectedGameId === game.id ? "primary" : "default"}
-              variant={selectedGameId === game.id ? "shadow" : "flat"}
-              onClick={() => setSelectedGameId(game.id)}
-              className="cursor-pointer"
-            >
-              {game.name}
-            </Chip>
-          ))}
-        </div>
+        {usingPreset && (
+          <div className="flex flex-wrap gap-2 my-2">
+            {presetGames.map(game => (
+              <Chip
+                key={game.id}
+                color={selectedGameId === game.id ? "primary" : "default"}
+                variant={selectedGameId === game.id ? "shadow" : "flat"}
+                onClick={() => setSelectedGameId(game.id)}
+                className="cursor-pointer"
+              >
+                {game.name}
+              </Chip>
+            ))}
+          </div>
+        )}
       </CardHeader>
       
       <CardBody>
-        {/* Show loading state if scanning */}
-        {isScanning ? (
+        {/* Show loading state if scanning or fetching requirements */}
+        {(isScanning || loading) ? (
           <div className="py-8 text-center">
-            <p className="mb-2">Analyzing your system...</p>
+            <p className="mb-2">
+              {isScanning ? "Analyzing your system..." : "Loading game requirements..."}
+            </p>
             <Progress
               size="sm"
               isIndeterminate
@@ -267,6 +387,12 @@ const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirements
           </div>
         ) : (
           <>
+            {error && (
+              <div className="mb-4 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-red-600 dark:text-red-300 text-sm">
+                {error}
+              </div>
+            )}
+          
             {/* Overall Compatibility */}
             <div className="mb-6">
               <div className="flex justify-between mb-2">
@@ -312,7 +438,7 @@ const GameRequirements = ({ gameId, gameName, className = "" }: GameRequirements
             {/* Individual Requirements */}
             <h4 className="font-semibold mb-4">Detailed Requirements</h4>
             <div className="space-y-5">
-              {requirements.map((requirement, index) => (
+              {gameRequirements.map((requirement, index) => (
                 <RequirementItem 
                   key={index}
                   requirement={requirement}

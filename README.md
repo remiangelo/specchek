@@ -4,6 +4,22 @@ A modern web application with dark mode support that scans your computer's hardw
 
 ![SpecChek Screenshot](https://placehold.co/800x400?text=SpecChek+Screenshot)
 
+## IGDB API Integration
+
+This application uses the IGDB API to fetch game data, including system requirements, prices, screenshots, and more. To set up the API:
+
+1. Create a Twitch Developer account at [https://dev.twitch.tv/](https://dev.twitch.tv/)
+2. Register a new application at [https://dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)
+3. Copy your Client ID and Client Secret
+4. Create a `.env` file in the root directory based on `.env.example`
+5. Add your IGDB Client ID and Client Secret to the `.env` file
+
+Example `.env` file:
+```
+VITE_IGDB_CLIENT_ID=your_client_id_here
+VITE_IGDB_CLIENT_SECRET=your_client_secret_here
+```
+
 ## Features
 
 - **Hardware Scanning**: Detects your CPU, GPU, RAM, and storage specifications
@@ -12,6 +28,7 @@ A modern web application with dark mode support that scans your computer's hardw
 - **RAWG API Integration**: Connects to the RAWG API with local data fallback
 - **Dark Mode Support**: Seamless switching between light and dark themes
 - **Modern UI Design**: Clean, responsive interface with smooth animations
+- **IGDB API Integration**: Connects to the IGDB API for additional game data
 
 ## Tech Stack
 
@@ -24,6 +41,7 @@ A modern web application with dark mode support that scans your computer's hardw
 - Axios for API requests
 - RAWG API for game data
 - Systeminformation for hardware detection
+- IGDB API for additional game data
 
 ## Getting Started
 
@@ -56,12 +74,14 @@ npm install
 VITE_RAWG_API_KEY=your_api_key_here
 ```
 
-4. Start the development server:
+4. Set up your environment variables as described above
+
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-5. Open your browser and navigate to `http://localhost:5173`
+6. Open your browser and navigate to `http://localhost:5173`
 
 ## Building for Production
 

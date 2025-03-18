@@ -20,8 +20,7 @@ const HardwareScan = () => {
     error, 
     scanHardware,
     isScanningEnabled,
-    toggleScanning,
-    performanceCategory 
+    toggleScanning
   } = useSystemInfo();
 
   // Auto-navigate to results when scan is complete if the option is enabled
