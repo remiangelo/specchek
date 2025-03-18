@@ -1,348 +1,307 @@
 import axios from 'axios';
 import { Game } from '../types';
+import gamesData from '../data/gamesData.json';
 
-// IGDB API configuration
-const CLIENT_ID = import.meta.env.VITE_IGDB_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_IGDB_CLIENT_SECRET;
-const TWITCH_AUTH_URL = 'https://id.twitch.tv/oauth2/token';
-const IGDB_API_URL = 'https://api.igdb.com/v4';
+// API configuration
+const API_KEY = import.meta.env.VITE_RAWG_API_KEY || 'YOUR_API_KEY_HERE'; // Replace with your actual RAWG API key
+const CORS_PROXY = 'https://corsproxy.io/?'; // CORS proxy service
+const BASE_URL = 'https://api.rawg.io/api';
 
-// Log API credentials (but mask most of it for security)
-console.log('API Configuration:');
-console.log(`- Client ID: ${CLIENT_ID ? CLIENT_ID.substring(0, 4) + '...' : 'Not set'}`);
-console.log(`- Client Secret: ${CLIENT_SECRET ? CLIENT_SECRET.substring(0, 4) + '...' : 'Not set'}`);
-
-// Store the access token and its expiration
-let accessToken: string | null = null;
-let tokenExpiry: number | null = null;
-
-// Flag to indicate if we're using live data
-export let usingLiveData = true;
-
-/**
- * Get an OAuth access token from Twitch for IGDB API access
- */
-const getAccessToken = async (): Promise<string> => {
-  // Check if we have a valid token already
-  if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
-    console.log('Using existing access token');
-    return accessToken;
-  }
-
-  try {
-    console.log('Getting new access token from Twitch...');
-    const authUrl = `${TWITCH_AUTH_URL}?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`;
-    console.log(`Auth URL: ${TWITCH_AUTH_URL}?client_id=[MASKED]&client_secret=[MASKED]&grant_type=client_credentials`);
-    
-    const response = await axios.post(authUrl);
-    
-    console.log('Auth response status:', response.status);
-    console.log('Auth response data type:', typeof response.data);
-    
-    const newToken = response.data.access_token;
-    if (!newToken) {
-      console.error('Response data:', JSON.stringify(response.data, null, 2));
-      throw new Error('No access token received from Twitch');
-    }
-    
-    accessToken = newToken;
-    // Set expiry time (subtract 10 minutes to be safe)
-    tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 600000;
-    
-    console.log('Successfully obtained new access token');
-    console.log(`Token expiry: ${new Date(tokenExpiry).toISOString()}`);
-    return newToken;
-  } catch (error) {
-    console.error('Failed to get access token:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Error response status:', error.response.status);
-      console.error('Error response data:', error.response.data);
-    }
-    throw new Error('Authentication with IGDB failed');
-  }
+// Helper function to construct API URL
+const getApiUrl = (endpoint: string, params: Record<string, string | number> = {}) => {
+  // Add API key to params
+  const paramsWithKey = { ...params, key: API_KEY };
+  
+  // Construct query string
+  const queryString = Object.entries(paramsWithKey)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+  
+  // Use CORS proxy during development
+  const useProxy = import.meta.env.DEV;
+  const baseUrlWithProxy = useProxy ? `${CORS_PROXY}${encodeURIComponent(`${BASE_URL}`)}` : BASE_URL;
+  
+  return `${baseUrlWithProxy}${endpoint}?${queryString}`;
 };
 
-/**
- * Make a request to the IGDB API
- */
-const queryIGDB = async (endpoint: string, query: string): Promise<any> => {
+// Interface for RAWG API game data structure
+interface RawgGame {
+  id: number;
+  name: string;
+  released: string;
+  background_image: string;
+  description?: string;
+  description_raw?: string;
+  developers?: Array<{ name: string }>;
+  publishers?: Array<{ name: string }>;
+  genres?: Array<{ name: string }>;
+  tags?: Array<{ name: string }>;
+  platforms?: Array<{
+    platform: { name: string };
+    requirements?: {
+      minimum?: string;
+      recommended?: string;
+    };
+  }>;
+  short_screenshots?: Array<{ image: string }>;
+  stores?: Array<{
+    store: { name: string; domain?: string };
+    url: string;
+  }>;
+}
+
+// Function to parse system requirements from RAWG API
+const parseRequirements = (platforms?: RawgGame['platforms']) => {
+  const defaultReqs = {
+    os: ['Windows 10'],
+    cpu: 'Information not available',
+    gpu: 'Information not available',
+    ram: 8,
+    storage: 50
+  };
+
+  if (!platforms || platforms.length === 0) {
+    return { minimum: defaultReqs, recommended: defaultReqs };
+  }
+
+  // Find PC platform
+  const pcPlatform = platforms.find(p => 
+    p.platform.name.includes('PC') || 
+    p.platform.name.includes('Windows')
+  );
+
+  if (!pcPlatform || !pcPlatform.requirements) {
+    return { minimum: defaultReqs, recommended: defaultReqs };
+  }
+
+  const { minimum, recommended } = pcPlatform.requirements;
+
+  // Parse minimum requirements
+  const minReqs = { ...defaultReqs };
+  if (minimum) {
+    const minText = minimum.toLowerCase();
+    
+    // Extract OS
+    if (minText.includes('windows')) {
+      minReqs.os = ['Windows 10'];
+      if (minText.includes('windows 7')) minReqs.os.push('Windows 7');
+      if (minText.includes('windows 8')) minReqs.os.push('Windows 8');
+    }
+    
+    // Extract CPU
+    const cpuMatch = minText.match(/cpu:([^,;]+)/i) || minText.match(/processor:([^,;]+)/i);
+    if (cpuMatch) minReqs.cpu = cpuMatch[1].trim();
+    
+    // Extract GPU
+    const gpuMatch = minText.match(/graphics:([^,;]+)/i) || minText.match(/gpu:([^,;]+)/i);
+    if (gpuMatch) minReqs.gpu = gpuMatch[1].trim();
+    
+    // Extract RAM
+    const ramMatch = minText.match(/memory:([^,;]+)gb/i) || minText.match(/ram:([^,;]+)gb/i);
+    if (ramMatch) minReqs.ram = parseInt(ramMatch[1].trim(), 10) || 8;
+    
+    // Extract Storage
+    const storageMatch = minText.match(/storage:([^,;]+)gb/i) || minText.match(/space:([^,;]+)gb/i);
+    if (storageMatch) minReqs.storage = parseInt(storageMatch[1].trim(), 10) || 50;
+  }
+
+  // Parse recommended requirements
+  const recReqs = { ...defaultReqs };
+  if (recommended) {
+    const recText = recommended.toLowerCase();
+    
+    // Extract OS
+    if (recText.includes('windows')) {
+      recReqs.os = ['Windows 10'];
+      if (recText.includes('windows 7')) recReqs.os.push('Windows 7');
+      if (recText.includes('windows 8')) recReqs.os.push('Windows 8');
+    }
+    
+    // Extract CPU
+    const cpuMatch = recText.match(/cpu:([^,;]+)/i) || recText.match(/processor:([^,;]+)/i);
+    if (cpuMatch) recReqs.cpu = cpuMatch[1].trim();
+    
+    // Extract GPU
+    const gpuMatch = recText.match(/graphics:([^,;]+)/i) || recText.match(/gpu:([^,;]+)/i);
+    if (gpuMatch) recReqs.gpu = gpuMatch[1].trim();
+    
+    // Extract RAM
+    const ramMatch = recText.match(/memory:([^,;]+)gb/i) || recText.match(/ram:([^,;]+)gb/i);
+    if (ramMatch) recReqs.ram = parseInt(ramMatch[1].trim(), 10) || 12;
+    
+    // Extract Storage
+    const storageMatch = recText.match(/storage:([^,;]+)gb/i) || recText.match(/space:([^,;]+)gb/i);
+    if (storageMatch) recReqs.storage = parseInt(storageMatch[1].trim(), 10) || 50;
+  }
+
+  return {
+    minimum: minReqs,
+    recommended: recReqs
+  };
+};
+
+// Function to convert RAWG game to our Game type
+const convertRawgGameToGame = (game: RawgGame): Game => {
+  // Parse requirements
+  const { minimum, recommended } = parseRequirements(game.platforms);
+  
+  // Extract store links
+  const storeLinks: Record<string, string> = {};
+  if (game.stores) {
+    game.stores.forEach(store => {
+      const storeName = store.store.name.toLowerCase();
+      if (storeName.includes('steam')) storeLinks.steam = store.url;
+      else if (storeName.includes('epic')) storeLinks.epic = store.url;
+      else if (storeName.includes('gog')) storeLinks.gog = store.url;
+      else if (storeName.includes('microsoft')) storeLinks.microsoft = store.url;
+      else if (storeName.includes('playstation')) storeLinks.playstation = store.url;
+    });
+  }
+  
+  return {
+    id: game.id,
+    title: game.name,
+    developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown Developer',
+    publisher: game.publishers && game.publishers.length > 0 ? game.publishers[0].name : 'Unknown Publisher',
+    releaseDate: game.released || 'Unknown',
+    genre: game.genres ? game.genres.map(g => g.name) : ['Unknown'],
+    tags: game.tags ? game.tags.slice(0, 10).map(t => t.name) : [],
+    description: game.description_raw || game.description || 'No description available.',
+    shortDescription: game.description_raw ? 
+      game.description_raw.substring(0, 100) + '...' : 
+      'No short description available.',
+    coverImage: game.background_image || 'https://via.placeholder.com/600x400?text=Game+Image+Not+Available',
+    screenshots: game.short_screenshots ? 
+      game.short_screenshots.map(s => s.image) : 
+      ['https://via.placeholder.com/1920x1080?text=Screenshot+Not+Available'],
+    minimumRequirements: minimum,
+    recommendedRequirements: recommended,
+    storeLinks: storeLinks
+  };
+};
+
+// Function to fetch games from the RAWG API
+export const fetchGames = async (page = 1, pageSize = 12): Promise<Game[]> => {
+  console.log(`fetchGames: Fetching page ${page} with ${pageSize} games per page`);
   try {
-    const token = await getAccessToken();
-    
-    console.log(`Making IGDB API request to ${endpoint}:`);
-    console.log('Query:', query);
-    
-    const response = await axios({
-      url: `${IGDB_API_URL}/${endpoint}`,
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Client-ID': CLIENT_ID,
-        'Authorization': `Bearer ${token}`
-      },
-      data: query
+    const apiUrl = getApiUrl('/games', {
+      page,
+      page_size: pageSize,
+      ordering: '-released',
+      platforms: '4', // PC platform ID
     });
     
-    console.log(`IGDB response status: ${response.status}`);
-    console.log(`Response data length: ${Array.isArray(response.data) ? response.data.length : 'Not an array'}`);
+    console.log('fetchGames: API URL:', apiUrl);
     
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      console.log('First item in response:', JSON.stringify(response.data[0], null, 2).substring(0, 200) + '...');
+    const response = await axios.get(apiUrl);
+    console.log(`fetchGames: Received ${response.data.results.length} games from API`);
+    
+    if (!response.data.results || response.data.results.length === 0) {
+      console.warn('fetchGames: No results returned from API, using fallback data');
+      // Return a portion of our local data
+      const startIndex = (page - 1) * pageSize;
+      return (gamesData as Game[]).slice(startIndex, startIndex + pageSize);
     }
     
-    return response.data;
+    // Convert API response to our Game type
+    return response.data.results.map((game: RawgGame) => convertRawgGameToGame(game));
   } catch (error) {
-    console.error(`Error querying IGDB ${endpoint}:`, error);
+    console.error('fetchGames: Error fetching games from API:', error);
+    console.log('fetchGames: Using fallback data');
     
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Error response status:', error.response.status);
-      console.error('Error response data:', error.response.data);
-    }
-    
-    throw error;
+    // Return a portion of our local data
+    const startIndex = (page - 1) * pageSize;
+    return (gamesData as Game[]).slice(startIndex, startIndex + pageSize);
   }
 };
 
-/**
- * Fetch a list of games
- */
-export const fetchGames = async (page = 1, pageSize = 20): Promise<Game[]> => {
-  try {
-    console.log(`Fetching games from IGDB (page ${page}, pageSize ${pageSize})...`);
-    
-    // Calculate offset for pagination
-    const offset = (page - 1) * pageSize;
-    
-    // Use a simplified query with only essential fields
-    const query = `
-      fields name, cover.image_id, first_release_date;
-      limit ${pageSize};
-      offset ${offset};
-      sort total_rating desc;
-    `;
-    
-    const games = await queryIGDB('games', query);
-    console.log(`Fetched ${games.length} games from IGDB`);
-    
-    if (games.length === 0) {
-      console.warn('IGDB returned zero games, this is unusual');
-    }
-    
-    // If we get games back, do a second query to get more details for these specific games
-    const detailedGames = [];
-    if (games.length > 0) {
-      // Map the simplified games to our Game format with placeholder values
-      for (const game of games) {
-        try {
-          detailedGames.push({
-            id: game.id,
-            title: game.name,
-            coverImage: game.cover 
-              ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg`
-              : 'https://placehold.co/600x800?text=No+Image',
-            developer: 'Loading...',
-            publisher: 'Loading...',
-            releaseDate: game.first_release_date 
-              ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
-              : 'Unknown',
-            genre: ['Loading...'],
-            tags: [],
-            description: 'Loading description...',
-            shortDescription: 'Loading description...',
-            minimumRequirements: {
-              os: ['Windows 10'],
-              cpu: 'Information not available',
-              gpu: 'Information not available',
-              ram: 8,
-              storage: 50
-            },
-            recommendedRequirements: {
-              os: ['Windows 10'],
-              cpu: 'Information not available',
-              gpu: 'Information not available',
-              ram: 16,
-              storage: 50
-            },
-            website: '#',
-            storeLinks: {},
-            screenshots: []
-          });
-        } catch (conversionError) {
-          console.error(`Error converting game ${game.id}:`, conversionError);
-        }
-      }
-    }
-    
-    // Convert to our Game format
-    usingLiveData = true;
-    return detailedGames.length > 0 ? detailedGames : [];
-  } catch (error) {
-    console.error('Error fetching games:', error);
-    usingLiveData = false;
-    // Return empty array
-    return [];
-  }
-};
-
-/**
- * Fetch details for a specific game
- */
+// Function to fetch game details from the RAWG API
 export const fetchGameDetails = async (id: number): Promise<Game> => {
+  console.log(`fetchGameDetails: Fetching details for game ${id}`);
   try {
-    console.log(`Fetching details for game ${id} from IGDB...`);
+    const apiUrl = getApiUrl(`/games/${id}`);
+    console.log('fetchGameDetails: API URL:', apiUrl);
     
-    // Use a simplified query with only essential fields
-    const query = `
-      fields name, cover.image_id, first_release_date, summary;
-      where id = ${id};
-    `;
+    const response = await axios.get(apiUrl);
+    console.log('fetchGameDetails: Received game details from API');
     
-    const games = await queryIGDB('games', query);
+    // Get screenshots
+    const screenshotsUrl = getApiUrl(`/games/${id}/screenshots`);
+    const screenshotsResponse = await axios.get(screenshotsUrl);
     
-    if (!games || games.length === 0) {
-      console.error(`No game found with ID ${id} in IGDB database`);
-      throw new Error(`Game with ID ${id} not found`);
+    const gameData = response.data;
+    if (screenshotsResponse.data.results) {
+      gameData.short_screenshots = screenshotsResponse.data.results;
     }
     
-    console.log(`Successfully fetched details for game: ${games[0].name} (ID: ${games[0].id})`);
-    
-    // Convert the game to our format with minimal information
-    const game = games[0];
-    const gameDetails: Game = {
-      id: game.id,
-      title: game.name,
-      coverImage: game.cover 
-        ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg`
-        : 'https://placehold.co/600x800?text=No+Image',
-      developer: 'Unknown Developer',
-      publisher: 'Unknown Publisher',
-      releaseDate: game.first_release_date 
-        ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
-        : 'Unknown',
-      genre: ['Unknown'],
-      tags: [],
-      description: game.summary || 'No description available.',
-      shortDescription: game.summary 
-        ? (game.summary.length > 150 ? game.summary.substring(0, 150) + '...' : game.summary)
-        : 'No description available.',
-      minimumRequirements: {
-        os: ['Windows 10'],
-        cpu: 'Information not available',
-        gpu: 'Information not available',
-        ram: 8,
-        storage: 50
-      },
-      recommendedRequirements: {
-        os: ['Windows 10'],
-        cpu: 'Information not available',
-        gpu: 'Information not available',
-        ram: 16,
-        storage: 50
-      },
-      website: '#',
-      storeLinks: {},
-      screenshots: []
-    };
-    
-    usingLiveData = true;
-    return gameDetails;
+    // Convert API response to our Game type
+    return convertRawgGameToGame(gameData);
   } catch (error) {
-    console.error(`Error fetching game details for ID ${id}:`, error);
+    console.error('fetchGameDetails: Error fetching game details:', error);
+    console.log('fetchGameDetails: Looking for game in fallback data');
     
-    if (axios.isAxiosError(error)) {
-      console.error('Fetch details failed with status:', error.response?.status);
-      console.error('Error details:', error.response?.data);
+    // Try to find the game in our local data
+    const gameFromLocal = (gamesData as Game[]).find(game => game.id === id);
+    
+    if (gameFromLocal) {
+      console.log('fetchGameDetails: Found game in fallback data');
+      return gameFromLocal;
     }
     
-    usingLiveData = false;
+    // If game not found in local data, throw an error
     throw new Error(`Game with ID ${id} not found`);
   }
 };
 
-/**
- * Search for games
- */
+// Function to search for games from the RAWG API
 export const searchGames = async (searchTerm: string): Promise<Game[]> => {
-  if (!searchTerm.trim()) {
-    console.log('Search term is empty, returning default games');
-    return fetchGames();
-  }
-
+  console.log(`searchGames: Searching for "${searchTerm}"`);
   try {
-    console.log(`Searching for games with term "${searchTerm}"...`);
+    const apiUrl = getApiUrl('/games', {
+      search: searchTerm,
+      page_size: 20,
+      platforms: '4', // PC platform ID
+    });
     
-    // Escape the search term to prevent injection
-    const sanitizedTerm = searchTerm.replace(/["\\]/g, '\\$&');
-    console.log(`Sanitized search term: "${sanitizedTerm}"`);
+    console.log('searchGames: API URL:', apiUrl);
     
-    // Use a simplified query with only essential fields
-    const query = `
-      search "${sanitizedTerm}";
-      fields name, cover.image_id, first_release_date;
-      limit 20;
-    `;
+    const response = await axios.get(apiUrl);
     
-    const games = await queryIGDB('games', query);
-    console.log(`Found ${games.length} games matching "${searchTerm}"`);
+    console.log(`searchGames: Received ${response.data.results.length} results from API`);
     
-    if (games.length === 0) {
-      console.log(`No games found matching "${searchTerm}" in IGDB database`);
-      return [];
+    if (!response.data.results || response.data.results.length === 0) {
+      console.log('searchGames: No results from API, searching in fallback data');
+      // Search in local data
+      const searchTermLower = searchTerm.toLowerCase();
+      const localResults = (gamesData as Game[]).filter(game => 
+        game.title.toLowerCase().includes(searchTermLower) ||
+        game.developer.toLowerCase().includes(searchTermLower) ||
+        game.publisher.toLowerCase().includes(searchTermLower) ||
+        game.tags.some(tag => tag.toLowerCase().includes(searchTermLower)) ||
+        game.genre.some(genre => genre.toLowerCase().includes(searchTermLower))
+      );
+      
+      console.log(`searchGames: Found ${localResults.length} matches in fallback data`);
+      return localResults;
     }
     
-    // Map the simplified games to our Game format with placeholder values
-    const detailedGames = [];
-    for (const game of games) {
-      try {
-        detailedGames.push({
-          id: game.id,
-          title: game.name,
-          coverImage: game.cover 
-            ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg`
-            : 'https://placehold.co/600x800?text=No+Image',
-          developer: 'Loading...',
-          publisher: 'Loading...',
-          releaseDate: game.first_release_date 
-            ? new Date(game.first_release_date * 1000).toISOString().split('T')[0]
-            : 'Unknown',
-          genre: ['Loading...'],
-          tags: [],
-          description: 'Loading description...',
-          shortDescription: 'Loading description...',
-          minimumRequirements: {
-            os: ['Windows 10'],
-            cpu: 'Information not available',
-            gpu: 'Information not available',
-            ram: 8,
-            storage: 50
-          },
-          recommendedRequirements: {
-            os: ['Windows 10'],
-            cpu: 'Information not available',
-            gpu: 'Information not available',
-            ram: 16,
-            storage: 50
-          },
-          website: '#',
-          storeLinks: {},
-          screenshots: []
-        });
-      } catch (conversionError) {
-        console.error(`Error converting search result ${game.id}:`, conversionError);
-      }
-    }
-    
-    usingLiveData = true;
-    return detailedGames;
+    // Convert API response to our Game type
+    return response.data.results.map((game: RawgGame) => convertRawgGameToGame(game));
   } catch (error) {
-    console.error(`Error searching for "${searchTerm}":`, error);
+    console.error('searchGames: Error searching games:', error);
+    console.log('searchGames: Searching in fallback data');
     
-    if (axios.isAxiosError(error)) {
-      console.error('Search failed with status:', error.response?.status);
-      console.error('Error details:', error.response?.data);
-    }
+    // Search in local data
+    const searchTermLower = searchTerm.toLowerCase();
+    const localResults = (gamesData as Game[]).filter(game => 
+      game.title.toLowerCase().includes(searchTermLower) ||
+      game.developer.toLowerCase().includes(searchTermLower) ||
+      game.publisher.toLowerCase().includes(searchTermLower) ||
+      game.tags.some(tag => tag.toLowerCase().includes(searchTermLower)) ||
+      game.genre.some(genre => genre.toLowerCase().includes(searchTermLower))
+    );
     
-    usingLiveData = false;
-    return [];
+    console.log(`searchGames: Found ${localResults.length} matches in fallback data`);
+    return localResults;
   }
 }; 

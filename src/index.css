@@ -1,44 +1,94 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-brutalist-lightgray text-brutalist-gray font-sans;
+  :root {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+                 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-mono font-bold;
   }
 }
 
 @layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white font-medium rounded-lg 
+           hover:bg-blue-700 transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white font-medium 
+           rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-300 
+           dark:hover:bg-gray-700 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+           rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+  
   .brutal-border {
-    @apply border-2 border-brutalist-dark;
+    @apply border-2 border-gray-800 dark:border-gray-700;
   }
   
-  .brutal-btn {
-    @apply font-mono px-4 py-2 bg-white brutal-border shadow-brutal 
-           transition-transform duration-100 hover:-translate-y-1 hover:translate-x-1 
-           active:translate-y-0 active:translate-x-0 active:shadow-none text-brutalist-dark;
+  .form-input {
+    @apply px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 
+           rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 
+           focus:border-blue-500 w-full transition-colors;
   }
-  
-  .brutal-btn-accent {
-    @apply brutal-btn bg-brutalist-accent text-white;
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-gradient-x {
+    animation: gradient-x 15s ease infinite;
   }
-  
-  .brutal-btn-secondary {
-    @apply brutal-btn bg-brutalist-secondary text-white;
-  }
-  
-  .brutal-card {
-    @apply brutal-border bg-white p-4 shadow-brutal;
-  }
-  
-  .brutal-input {
-    @apply brutal-border px-4 py-2 bg-white focus:outline-none focus:ring-0 
-           focus:border-brutalist-accent w-full font-mono;
+
+  @keyframes gradient-x {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
 }

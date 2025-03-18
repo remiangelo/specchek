@@ -5,8 +5,8 @@ import Home from './pages/Home'
 import ScanResults from './pages/ScanResults'
 import GameLibrary from './pages/GameLibrary'
 import GameDetails from './pages/GameDetails'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
+import HardwareScan from './pages/HardwareScan'
+import Layout from './components/Layout'
 
 // Create a client for React Query
 const queryClient = new QueryClient()
@@ -16,18 +16,15 @@ function App() {
     <NextUIProvider>
       <QueryClientProvider client={queryClient}>
         <Router>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="container mx-auto flex-grow px-4 py-8">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/results" element={<ScanResults />} />
-                <Route path="/games" element={<GameLibrary />} />
-                <Route path="/games/:id" element={<GameDetails />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/scan" element={<HardwareScan />} />
+              <Route path="/results" element={<ScanResults />} />
+              <Route path="/games" element={<GameLibrary />} />
+              <Route path="/games/:id" element={<GameDetails />} />
+            </Route>
+          </Routes>
         </Router>
       </QueryClientProvider>
     </NextUIProvider>

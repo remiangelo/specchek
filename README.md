@@ -1,6 +1,6 @@
 # SpecChek
 
-A brutalist-style web application that scans your computer's hardware and determines which games it can run based on minimum and recommended specifications. The game library uses the IGDB API to display comprehensive game information.
+A modern web application with dark mode support that scans your computer's hardware and determines which games it can run based on minimum and recommended specifications. The game library includes a robust fallback to local data when API connection fails.
 
 ![SpecChek Screenshot](https://placehold.co/800x400?text=SpecChek+Screenshot)
 
@@ -9,18 +9,20 @@ A brutalist-style web application that scans your computer's hardware and determ
 - **Hardware Scanning**: Detects your CPU, GPU, RAM, and storage specifications
 - **Game Compatibility**: Checks if your system meets minimum or recommended requirements for games
 - **Game Library**: Browse a collection of games with their system requirements
-- **IGDB Integration**: Connects to the IGDB API for up-to-date game data
-- **Brutalist Design**: Modern brutalist UI with minimal animations
+- **RAWG API Integration**: Connects to the RAWG API with local data fallback
+- **Dark Mode Support**: Seamless switching between light and dark themes
+- **Modern UI Design**: Clean, responsive interface with smooth animations
 
 ## Tech Stack
 
 - React + TypeScript
 - Vite for fast development and building
 - Tailwind CSS for styling
+- NextUI components
 - Framer Motion for animations
 - React Router for navigation
 - Axios for API requests
-- IGDB API for game data
+- RAWG API for game data
 - Systeminformation for hardware detection
 
 ## Getting Started
@@ -28,18 +30,13 @@ A brutalist-style web application that scans your computer's hardware and determ
 ### Prerequisites
 
 - Node.js 16+ and npm
-- Twitch Developer Account (for IGDB API access)
+- RAWG API Key (optional, application works with local data)
 
-### Setting up IGDB API Access
+### Setting up RAWG API Access (Optional)
 
-1. Go to [Twitch Developer Console](https://dev.twitch.tv/console/apps) and sign in
-2. Create a new application:
-   - Name: SpecChek (or your preferred name)
-   - OAuth Redirect URL: http://localhost:5173 (or your local dev URL)
-   - Category: Website Integration
-3. After registration, you'll receive a Client ID
-4. Generate a Client Secret from your application page
-5. Copy both the Client ID and Client Secret
+1. Go to [RAWG API](https://rawg.io/apidocs) and sign up
+2. Get your API key from the dashboard
+3. The application will work without an API key using local data, but connecting to the API provides more games
 
 ### Installation
 
@@ -54,24 +51,17 @@ cd specchek
 npm install
 ```
 
-3. Create an `.env` file in the root directory:
+3. Create an `.env` file in the root directory (optional):
 ```
-VITE_IGDB_CLIENT_ID=your_client_id_here
-VITE_IGDB_CLIENT_SECRET=your_client_secret_here
+VITE_RAWG_API_KEY=your_api_key_here
 ```
 
-4. Test the IGDB API connection:
-```bash
-node src/services/testIGDB.js
-```
-If successful, you should see a list of games and confirmation that the API is working.
-
-5. Start the development server:
+4. Start the development server:
 ```bash
 npm run dev
 ```
 
-6. Open your browser and navigate to `http://localhost:5173`
+5. Open your browser and navigate to `http://localhost:5173`
 
 ## Building for Production
 
@@ -83,17 +73,25 @@ The built files will be in the `dist` directory.
 
 ## How It Works
 
-1. The application uses the `systeminformation` library to detect your hardware specifications
-2. It fetches game data from the IGDB API, including system requirements
+1. The application uses browser APIs to detect your hardware specifications
+2. It fetches game data from the RAWG API or uses local data when the API is unavailable
 3. It compares your hardware against the game requirements
 4. Results are displayed showing which games you can run at minimum or recommended settings
+
+### Offline Capability
+
+The application includes a comprehensive local database of popular games that will be used when:
+- The API is unavailable
+- The user is offline
+- API rate limits are exceeded
+- Search returns no results from the API
 
 ## Limitations
 
 - Hardware detection requires permissions and may not work in all browsers
 - Game compatibility is based on simplified comparisons and may not be 100% accurate
 - The application currently only works on desktop browsers
-- IGDB API has rate limits that may affect functionality if exceeded
+- RAWG API has rate limits that may affect functionality if exceeded
 
 ## License
 
@@ -101,9 +99,9 @@ MIT
 
 ## Acknowledgements
 
-- [IGDB API](https://api.igdb.com/) for game data
+- [RAWG API](https://rawg.io/apidocs) for game data
 - [Tailwind CSS](https://tailwindcss.com/)
+- [NextUI](https://nextui.org/)
 - [Heroicons](https://heroicons.com/)
-- [Systeminformation](https://systeminformation.io/)
 - [Axios](https://axios-http.com/)
 - [Framer Motion](https://www.framer.com/motion/)

@@ -41,7 +41,7 @@ const Navbar = () => {
     <NextUINavbar
       isMenuOpen={isMenuOpen}
       onMenuOpenChange={setIsMenuOpen}
-      className="bg-white brutal-border mb-4 shadow-sm"
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-4 shadow-sm"
       maxWidth="full"
       height="4rem"
     >
@@ -58,19 +58,19 @@ const Navbar = () => {
             variants={logoVariants}
           >
             <Link to="/" className="flex items-center">
-              <span className="relative text-2xl font-mono font-bold text-brutalist-dark">
+              <span className="relative text-2xl font-mono font-bold text-gray-900 dark:text-white">
                 SPEC
                 <motion.span 
-                  className="text-brutalist-accent" 
+                  className="text-blue-600 dark:text-blue-500" 
                   animate={{ 
-                    color: ["#ff6b6b", "#4ecdc4", "#ff6b6b"],
+                    color: ["#3b82f6", "#8b5cf6", "#3b82f6"],
                   }}
                   transition={{ duration: 4, repeat: Infinity }}
                 >
                   CHEK
                 </motion.span>
                 <motion.div 
-                  className="absolute bottom-0 left-0 h-[2px] bg-brutalist-accent"
+                  className="absolute bottom-0 left-0 h-[2px] bg-blue-600 dark:bg-blue-500"
                   initial={{ width: 0 }}
                   animate={{ width: "100%" }}
                   transition={{ delay: 1, duration: 0.8 }}
@@ -95,14 +95,14 @@ const Navbar = () => {
                 to={item.path} 
                 className={`font-mono relative px-2 py-1 ${
                   isActive(item.path) 
-                    ? 'text-brutalist-accent font-bold' 
-                    : 'text-brutalist-dark hover:text-brutalist-accent transition-colors'
+                    ? 'text-blue-600 dark:text-blue-500 font-bold' 
+                    : 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-500 transition-colors'
                 }`}
               >
                 {item.label}
                 {isActive(item.path) && (
                   <motion.div 
-                    className="absolute bottom-0 left-0 h-[2px] bg-brutalist-accent"
+                    className="absolute bottom-0 left-0 h-[2px] bg-blue-600 dark:bg-blue-500"
                     layoutId="activeIndicator"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     style={{ width: "100%" }}
@@ -114,7 +114,7 @@ const Navbar = () => {
         ))}
       </NavbarContent>
 
-      <NavbarMenu className="pt-8 bg-white">
+      <NavbarMenu className="pt-8 bg-white dark:bg-gray-900">
         {menuItems.map((item, index) => (
           <NavbarMenuItem key={item.path}>
             <motion.div
@@ -126,8 +126,8 @@ const Navbar = () => {
                 to={item.path}
                 className={`font-mono text-lg block py-2 ${
                   isActive(item.path)
-                    ? 'text-brutalist-accent font-bold'
-                    : 'text-brutalist-dark'
+                    ? 'text-blue-600 dark:text-blue-500 font-bold'
+                    : 'text-gray-900 dark:text-white'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
