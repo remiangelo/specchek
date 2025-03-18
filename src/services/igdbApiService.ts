@@ -257,18 +257,19 @@ const parseSystemRequirements = (requirements?: IgdbPlatformSpecification): {
 };
 
 // Convert IGDB game data to our Game type
-const convertIgdbGameToGame = (game: any): Game => {
+const convertIgdbGameToGame = (game: IgdbGame): Game => {
   // Parse the system requirements
-  const requirements = game.platforms?.find((p: any) => 
-    p.platform?.name === 'PC' || p.platform?.abbreviation === 'PC'
-  )?.platform_version_release_dates?.[0]?.platform_version?.specifications;
+  const pcPlatform = game.platforms?.find(p => 
+    p.name === 'PC' || p.abbreviation === 'PC'
+  );
   
+  const requirements = pcPlatform?.platform_version_release_dates?.[0]?.platform_version?.specifications;
   const { minimum, recommended } = parseSystemRequirements(requirements);
   
   // Get price from stores if available
   let priceString = 'Price not available';
   if (game.websites) {
-    const storeWebsite = game.websites.find((site: any) => site.category === 13); // 13 is for Steam
+    const storeWebsite = game.websites.find(site => site.category === 13); // 13 is for Steam
     if (storeWebsite && storeWebsite.price) {
       priceString = `$${storeWebsite.price.toFixed(2)}`;
     }
@@ -277,7 +278,7 @@ const convertIgdbGameToGame = (game: any): Game => {
   // Extract store links
   const storeLinks: Record<string, string> = {};
   if (game.websites) {
-    game.websites.forEach((site: any) => {
+    game.websites.forEach(site => {
       const url = site.url;
       // Map website categories to our store types
       switch (site.category) {
@@ -299,7 +300,7 @@ const convertIgdbGameToGame = (game: any): Game => {
   
   // Get screenshots
   const screenshots = game.screenshots
-    ? game.screenshots.map((s: any) => `https:${s.url.replace('t_thumb', 't_1080p')}`)
+    ? game.screenshots.map(s => `https:${s.url.replace('t_thumb', 't_1080p')}`)
     : [];
   
   // Get rating
@@ -323,11 +324,11 @@ const convertIgdbGameToGame = (game: any): Game => {
     id: game.id,
     title: game.name,
     coverImage: coverUrl,
-    developer: game.involved_companies?.find((company: any) => company.developer)?.company?.name || 'Unknown Developer',
-    publisher: game.involved_companies?.find((company: any) => company.publisher)?.company?.name || 'Unknown Publisher',
+    developer: game.involved_companies?.find(company => company.developer)?.company?.name || 'Unknown Developer',
+    publisher: game.involved_companies?.find(company => company.publisher)?.company?.name || 'Unknown Publisher',
     releaseDate: game.first_release_date ? new Date(game.first_release_date * 1000).toISOString().split('T')[0] : 'Unknown',
-    genre: game.genres?.map((g: any) => g.name) || ['Unknown'],
-    tags: game.themes?.map((t: any) => t.name) || [],
+    genre: game.genres?.map(g => g.name) || ['Unknown'],
+    tags: game.themes?.map(t => t.name) || [],
     price: priceString,
     description: game.summary || 'No description available.',
     shortDescription: game.summary ? `${game.summary.substring(0, 120)}...` : 'No description available.',
@@ -337,7 +338,7 @@ const convertIgdbGameToGame = (game: any): Game => {
     storeLinks: storeLinks,
     rating: ratings.length > 0 ? ratings : undefined,
     screenshots: screenshots,
-    videos: game.videos?.map((v: any) => ({
+    videos: game.videos?.map(v => ({
       thumbnail: `https://img.youtube.com/vi/${v.video_id}/maxresdefault.jpg`,
       url: `https://www.youtube.com/watch?v=${v.video_id}`,
       title: v.name || 'Game Video'
